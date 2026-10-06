@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Umma Hospital Management System</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <!-- app.js draws the current screen here -->
+    <div class="w" id="app">
+      <!-- Shown until app.js loads. If JavaScript is off, only the noscript message shows. -->
+      <p class="s">Loading Umma Care Portal…</p>
+      <noscript>
+        <h1>JavaScript is turned off</h1>
+        <p class="s">Turn on JavaScript in your browser settings to use Umma Care Portal, then refresh this page.</p>
+      </noscript>
+    </div>
+
+    <!-- ===== Page templates. {{name}} is filled in by app.js ===== -->
+
+    <!-- Sign in / register -->
+    <template id="t-auth">
+      <h1>Umma Hospital</h1>
+      <p class="s">Sign in or register to continue</p>
+      <div class="seg">{{rolesHtml}}</div>
+      {{bodyHtml}}
+    </template>
+
+    <template id="t-role">
+      <button data-role="{{role}}" aria-pressed="{{pressed}}">{{title}}</button>
+    </template>
+
+    <template id="t-admin-setup">
+      <div class="row">
+        <b>Admin account not set up</b>
+        <p class="s">The Node.js server is running, but this MySQL database has no admin account yet.</p>
+        <p class="s">Set ADMIN_EMAIL and ADMIN_PASSWORD in backend/.env, then restart the Node.js server. It will create the first admin account automatically.</p>
+        <button class="btn g" type="button" data-role-back>Back to account type</button>
+      </div>
+    </template>
+
+    <template id="t-email">
+      <form id="form-email">
+        <label>Email
+          <input name="email" type="email" required value="{{email}}" />
+        </label>
+        <p class="err">{{err}}</p>
+        <button class="btn">Continue</button>
+      </form>
+    </template>
+
+    <template id="t-signin">
+      <form id="form-signin">
+        <p>{{greetingHtml}} Enter your password to sign in.</p>
+        {{signinEmailHtml}}
+        <label>Password
+          <span class="password-field">
+            <input id="signin-password" name="pw" type="password" required autofocus />
+            {{passwordToggleHtml}}
+          </span>
+        </label>
+        <p class="err">{{err}}</p>
+        <button class="btn">Sign in</button>
+        <button type="button" class="btn g" data-forgot>Forgot password?</button>
+        <button type="button" class="btn g" data-back>Use a different email</button>
+      </form>
+    </template>
+
+    <template id="t-reset-request">
+      <form id="form-reset-request">
+        <p>We’ll send a password reset code to <b>{{email}}</b> if an account matches.</p>
+        <p class="s">The code expires after 10 minutes.</p>
+        <p class="err">{{err}}</p>
+        <button class="btn">Send reset code</button>
+        <button type="button" class="btn g" data-reset-back>Back to sign in</button>
+      </form>
+    </template>
+
+    <template id="t-reset-complete">
+      <form id="form-reset-complete">
+        <p>{{msg}}</p>
+        <label>Six-digit code
+          <input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required />
+        </label>
+        <label>New password
+          <span class="password-field">
+            <input name="pw" type="password" minlength="8" autocomplete="new-password" required />
+          </span>
+        </label>
+        <label>Confirm new password
+          <input name="confirmPw" type="password" minlength="8" autocomplete="new-password" required />
+        </label>
+        <p class="err">{{err}}</p>
+        <button class="btn">Reset password</button>
+        <button type="button" class="btn g" data-reset-back>Back to sign in</button>
+      </form>
+    </template>
+
+    <template id="t-signin-account">
+      <p class="s">Admin email: <b>{{email}}</b></p>
+    </template>
+
+    <template id="t-password-toggle">
+      <button class="password-toggle" type="button" data-toggle-password aria-label="Show password" aria-pressed="false" title="Show password">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+    </template>
+
+    <template id="t-greet-back">Welcome back, <b>{{name}}</b>.</template>
+    <template id="t-greet-new"><b class="ok">{{msg}}</b></template>
+
+    <template id="t-register">
+      <form id="form-register">
+        <p>No {{role}} account for <b>{{email}}</b>. Create one now.</p>
+        <label>Full name
+          <input name="name" required />
+        </label>
+        {{specHtml}}
+        <label>Password
+          <input name="pw" type="password" minlength="4" required />
+        </label>
+        <p class="err">{{err}}</p>
+        <button class="btn">Register</button>
+        <button type="button" class="btn g" data-back>Use a different email</button>
+      </form>
+    </template>
+
+    <template id="t-spec">
+      <label>Specialty
+        <input name="spec" required placeholder="e.g. General medicine" />
+      </label>
+    </template>
+
+    <!-- Shared pieces -->
+    <template id="t-header">
+      <div class="top">
+        <div>
+          <h1>{{name}}</h1>
+          <p class="s">{{title}} · Umma Hospital</p>
+        </div>
+        <button class="btn g" data-out>Sign out</button>
+      </div>
+    </template>
+
+    <template id="t-empty"><div class="empty">{{text}}</div></template>
+
+    <template id="t-note">
+      <div class="note">{{text}}
+        <small>{{by}} · {{at}}</small>
+      </div>
+    </template>
+
+    <!-- Patient page -->
+    <template id="t-patient">
+      {{headerHtml}}
+      <h2>Book a visit or medication</h2>
+      <form id="form-book">
+        <label>What do you need?
+          <textarea name="reason" required placeholder="Symptoms, or the medication you need"></textarea>
+        </label>
+        <label>Preferred date (optional)
+          <input name="pref" type="date" />
+        </label>
+        <button class="btn">Send request</button>
+      </form>
+      <p class="s">The admin will set your time with a doctor.</p>
+      <h2>My visits and records</h2>
+      {{visitsHtml}}
+    </template>
+
+    <template id="t-visit">
+      <div class="row">
+        <div class="top">
+          <div>{{reason}}<small>{{doctor}}{{when}}</small></div>
+          <span class="tag {{cls}}">{{status}}</span>
+        </div>
+        {{notesHtml}}
+      </div>
+    </template>
+
+    <!-- Admin page -->
+    <template id="t-admin">
+      {{headerHtml}}
+      <h2>Doctors and their available times</h2>
+      {{doctorsHtml}}
+      <h2>Appointments</h2>
+      {{apptsHtml}}
+    </template>
+
+    <template id="t-doctor-row">
+      <div class="row">
+        <b>{{name}}</b><small>{{spec}}</small>
+        {{timesHtml}}
+      </div>
+    </template>
+
+    <template id="t-time"><span class="tag">{{date}} {{time}}</span> </template>
+    <template id="t-no-times"><small>No free times set by this doctor</small></template>
+
+    <template id="t-assign">
+      <form class="form-assign" data-appt="{{id}}">
+        <div class="top">
+          <div>{{patient}}<small>{{reason}}{{pref}}</small></div>
+          <span class="tag">{{status}}</span>
+        </div>
+        {{controlsHtml}}
+      </form>
+    </template>
+
+    <template id="t-assign-controls">
+      <label>Doctor's available time
+        <select name="sid" required>
+          <option value="">Choose a time set by a doctor</option>
+          {{optionsHtml}}
+        </select>
+      </label>
+      <div class="g2">
+        <button class="btn">{{action}}</button>
+        <button type="button" class="btn g" data-cancel="{{id}}">Cancel visit</button>
+      </div>
+    </template>
+
+    <template id="t-assign-done"><small>{{doctor}}{{when}}</small></template>
+    <template id="t-option"><option value="{{id}}">{{label}}</option></template>
+    <template id="t-option-selected"><option value="{{id}}" selected>{{label}}</option></template>
+
+    <!-- Doctor page -->
+    <template id="t-doctor">
+      {{headerHtml}}
+      <h2>My available times</h2>
+      <form id="form-slot">
+        <div class="g2">
+          <label>Date <input name="date" type="date" required /></label>
+          <label>Time <input name="time" type="time" required /></label>
+        </div>
+        <button class="btn">Add available time</button>
+      </form>
+      <p class="s">Only the admin can see these times. The admin assigns patients to them.</p>
+      {{slotsHtml}}
+      <h2>My patients</h2>
+      {{patientsHtml}}
+    </template>
+
+    <template id="t-slot">
+      <div class="row top">
+        <div>{{date}} at {{time}}<small>{{state}}</small></div>
+        {{removeHtml}}
+      </div>
+    </template>
+
+    <template id="t-remove"><button class="btn g" data-delslot="{{id}}">Remove</button></template>
+
+    <template id="t-patient-form">
+      <form class="form-note" data-appt="{{id}}">
+        <div class="top">
+          <div><b>{{patient}}</b>
+            <small>{{reason}} · {{when}}</small>
+          </div>
+          <span class="tag {{cls}}">{{status}}</span>
+        </div>
+        {{historyHtml}}
+        {{thisVisitHtml}}
+        <label>Diagnosis and medication record
+          <textarea name="text" required></textarea>
+        </label>
+        <button class="btn">Save record</button>
+      </form>
+    </template>
+
+    <template id="t-history"><small>Previous history</small>{{notesHtml}}</template>
+    <template id="t-this-visit"><small>This visit</small>{{notesHtml}}</template>
+
+    <script src="app.js?v=password-reset-v1"></script>
+  </body>
+</html>
