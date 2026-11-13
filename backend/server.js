@@ -24,6 +24,12 @@ const pool = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+    ssl: process.env.DB_SSL === "true"
+        ? {
+            rejectUnauthorized: true,
+            ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA } : {})
+        }
+        : undefined,
     waitForConnections: true,
     connectionLimit: 10,
     dateStrings: true
@@ -206,6 +212,10 @@ const validRole = (role) => ["patient", "doctor", "admin"].includes(role);
 app.get("/", (req, res) => res.sendFile(path.join(frontendPath, "index.html")));
 app.get("/app.js", (req, res) => res.sendFile(path.join(frontendPath, "app.js")));
 app.get("/styles.css", (req, res) => res.sendFile(path.join(frontendPath, "styles.css")));
+
+app.get("/healthz", (req, res) => {
+    res.json({ status: "ok" });
+});
 
 app.get("/api/session", (req, res) => {
     res.json({ user: req.session.user || null });
