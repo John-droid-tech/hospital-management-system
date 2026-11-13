@@ -4,51 +4,54 @@ The browser app calls this Node.js API. The API stores users, appointments,
 doctor availability, notes, and login sessions in MySQL. The frontend itself
 does not connect directly to MySQL.
 
-## Deploy on Railway
+## Deploy on Google Cloud Run
 
 The root `Dockerfile` packages the Node.js backend and the frontend files it
-serves. The root `.dockerignore` keeps local environment files and dependencies
-out of the image.
+serves. Cloud Run can build this image from source; local Docker is not required.
+Cloud SQL provides the MySQL database.
 
-1. Push this repository to a GitHub repository connected to your Railway
-   account.
-2. Create a Railway project and add a **MySQL** database service. Wait for it
-   to finish deploying.
-3. Add a service from the GitHub repository. Leave the root directory at the
-   repository root so Railway detects the root `Dockerfile`.
-4. In the app service's **Variables**, add the database variables as references
-   to the MySQL service. Replace `MySQL` with the exact database service name
-   if it differs:
+1. Sign in to Google Cloud, select or create a project, and enable billing.
+   Cloud Run has a monthly free tier, but Cloud SQL and other resources can
+   incur charges. Review current pricing before creating them.
+2. Create a **Cloud SQL for MySQL** instance in the same region as the app.
+   Create an application database and a dedicated database user. Configure
+   automated backups before using real data.
+3. From the repository root, deploy the app using Cloud Run's source deploy
+   workflow (the root `Dockerfile` is used). In the Cloud Run service settings,
+   attach the Cloud SQL instance and use a service account with the
+   **Cloud SQL Client** role.
+4. Configure these Cloud Run environment variables. Replace the connection
+   name with the instance's `PROJECT:REGION:INSTANCE` value:
 
    ```text
-   DB_HOST=${{MySQL.MYSQLHOST}}
-   DB_PORT=${{MySQL.MYSQLPORT}}
-   DB_USER=${{MySQL.MYSQLUSER}}
-   DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
-   DB_NAME=${{MySQL.MYSQLDATABASE}}
-   DB_SSL=false
+   DB_SOCKET_PATH=/cloudsql/PROJECT:REGION:INSTANCE
+   DB_USER=<Cloud SQL application user>
+   DB_PASSWORD=<Cloud SQL application user's password>
+   DB_NAME=<application database name>
    NODE_ENV=production
-   SESSION_SECRET=<generate a private random value of at least 32 characters>
+   SESSION_SECRET=<private random value of at least 32 characters>
    ```
 
-   Add a generated secret directly in Railway, not to this repository or chat.
-   The private Railway MySQL connection does not need public database access.
-5. In the app service's **Settings**, set the healthcheck path to `/healthz`,
-   then deploy. After deployment, generate a public domain from the service's
-   **Networking** settings and open it to verify the site.
-6. To create the initial administrator, temporarily add `ADMIN_NAME`,
-   `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the app service's Variables and
-   redeploy. The password must be at least 12 characters. Remove these three
-   variables after the admin account is created; leaving them set resets the
-   first admin account's email and password on every server startup.
+   Use Secret Manager or Cloud Run's secret references for passwords and
+   `SESSION_SECRET`; do not commit secret values. The Cloud SQL connection uses
+   the mounted Unix socket, so `DB_SSL` is not needed for this connection.
+5. Set the Cloud Run health check path to `/healthz` and allow unauthenticated
+   access if this is a public website. Deploy and open the generated service
+   URL.
+6. To create the first administrator, temporarily add `ADMIN_NAME`,
+   `ADMIN_EMAIL`, and `ADMIN_PASSWORD` using secret/environment settings, then
+   deploy. The password must be at least 12 characters. Remove those three
+   variables after the account is created; leaving them set resets the first
+   admin account's email and password on every server startup.
 7. Add `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`,
-   and `SMTP_FROM` as app-service variables if password-reset email is needed.
+   and `SMTP_FROM` through secret/environment settings if password-reset email
+   is needed.
 
-Never put production credentials in source control or chat. Configure database
-backups in Railway and test that you can restore them. This project is a demo;
-do not store real patient or other sensitive health data in it. A clinical
-deployment requires security, privacy, regulatory, backup, and availability
-reviews appropriate to its jurisdiction and use.
+Never put production credentials in source control or chat. Test that database
+backups can be restored. This project is a demo; do not store real patient or
+other sensitive health data in it. A clinical deployment requires security,
+privacy, regulatory, backup, and availability reviews appropriate to its
+jurisdiction and use.
 
 ## Setup
 
